@@ -93,6 +93,13 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     or discovery.address in self._discovered_devices
                 ):
                     continue
+                # Only consider AC Infinity devices. async_discovered_service_info
+                # returns every BLE device HA has seen, so skip anything that does
+                # not advertise the AC Infinity manufacturer id (otherwise the
+                # manufacturer_data[MANUFACTURER_ID] lookups below raise
+                # KeyError: 2306 -> "Config flow could not be loaded: 500").
+                if MANUFACTURER_ID not in discovery.advertisement.manufacturer_data:
+                    continue
                 self._discovered_devices[discovery.address] = discovery
 
         if not self._discovered_devices:
