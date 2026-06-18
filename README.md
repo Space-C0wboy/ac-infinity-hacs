@@ -113,6 +113,8 @@ For an AIRTAP, the integration creates:
 | **Min Speed** / **Max Speed** | `number` | Low/high speed bounds used by **Auto** mode. |
 | **Auto Mode High/Low Temperature** | `number` | Temperature thresholds for the Auto-mode thermostat. |
 | **Auto Mode High/Low Temperature Trigger** | `switch` | Enable/disable each Auto temperature trigger. |
+| **Timer to On / Timer to Off Duration** | `number` | Run-time (minutes) for the **Timer to On** / **Timer to Off** modes. |
+| **Cycle On / Cycle Off Duration** | `number` | On and off durations (minutes) for **Cycle** mode. |
 
 > The device's true state is `mode` + `speed`; the fan entity is a friendly wrapper over it. **Off** = the device's Off mode; **on** = any running mode (On/Auto/Timer/Cycle), with the percentage showing the live speed. The operating mode isn't in the fan's Bluetooth advertisements, so the fan's **preset** may be blank for the first ~30 s after a restart until the first poll completes; it updates instantly thereafter.
 
@@ -170,6 +172,7 @@ logger:
 
 - **Operating modes, two synced ways** — as the fan entity's **preset modes** (Auto / Timer to On / Timer to Off / Cycle, with On/Off as the power toggle) **and** a standalone **`select` — Mode** dropdown (full Off / On / Auto / Timer / Cycle). Use whichever you like; they reflect the same state.
 - **`number` — manual Fan Speed** (0–10) that sets the running speed and reads the live value.
+- **`number` — Timer & Cycle durations** (minutes) for the Timer to On / Timer to Off / Cycle modes.
 - **`sensor` — Fan Speed** (read-only, `measurement` state class) for logging and statistics.
 - **Config-flow fix**: skip non-AC-Infinity BLE devices during discovery so manual *"Add Integration"* no longer 500s.
 - The fan toggle mirrors the operating mode (off only in Off mode) and reflects mode changes immediately instead of waiting for the next poll.

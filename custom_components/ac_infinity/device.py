@@ -42,6 +42,12 @@ class DeviceInfoEx(DeviceInfo):
         return DeviceInfoEx(**device_info.__dict__)
 
     auto_mode: Optional[AutoModeConfig] = None
+    # Durations in minutes (the wire format is seconds; we store/expose minutes,
+    # matching the official app). None until the first poll.
+    timer_to_on: Optional[int] = None
+    timer_to_off: Optional[int] = None
+    cycle_on: Optional[int] = None
+    cycle_off: Optional[int] = None
 
 
 @dataclass
@@ -156,6 +162,26 @@ class ACInfinityDevice(ACInfinityController):
                         high_humidity=data[26],
                         low_humidity=data[27],
                     )
+
+                    # Walk the response's [param][len][value...] TLVs to read the
+                    # timer/cycle durations (params 20/21/22). Values are 4-byte
+                    # big-endian seconds; cycle (22) is two such values [on, off].
+                    tlvs: dict[int, bytes] = {}
+                    plen = (data[2] << 8) | data[3]
+                    i = 10
+                    end = min(10 + plen, len(data))
+                    while i + 1 < end:
+                        pid = data[i]
+                        ln = data[i + 1]
+                        tlvs[pid] = data[i + 2:i + 2 + ln]
+                        i += 2 + ln
+                    if (v := tlvs.get(20)) and len(v) >= 4:
+                        self.state.timer_to_on = int.from_bytes(v[:4], "big") // 60
+                    if (v := tlvs.get(21)) and len(v) >= 4:
+                        self.state.timer_to_off = int.from_bytes(v[:4], "big") // 60
+                    if (v := tlvs.get(22)) and len(v) >= 8:
+                        self.state.cycle_on = int.from_bytes(v[:4], "big") // 60
+                        self.state.cycle_off = int.from_bytes(v[4:8], "big") // 60
 
                     self._config_changed_since_last_update = False
                     self._fire_callbacks(CallbackType.UPDATE_RESPONSE)
@@ -282,6 +308,64 @@ class ACInfinityDevice(ACInfinityController):
             self._config_changed_since_last_update = True
         finally:
             await self._execute_disconnect()
+
+    @staticmethod
+    def _minutes_seconds_bytes(minutes: int) -> list[int]:
+        """Encode a duration in minutes as the protocol's 4-byte BE seconds."""
+        return list(int(max(0, int(minutes)) * 60).to_bytes(4, "big"))
+
+    async def _async_set_duration(self, command: list[int], **new_state) -> None:
+        """Send a SET (work command 3) for a [param, len, *value] duration TLV.
+
+        On success, apply ``new_state`` to the device state and notify entities.
+        """
+        if self.state.type in FAMILY_E_MODELS:
+            command = command + [255, 0]
+        command = self._protocol._add_head(command, 3, self.sequence)
+        await self._ensure_connected()
+        try:
+            await self._send_command(command)
+            for key, value in new_state.items():
+                setattr(self.state, key, value)
+            self._config_changed_since_last_update = True
+            self._fire_callbacks(CallbackType.UPDATE_RESPONSE)
+        finally:
+            await self._execute_disconnect()
+
+    async def async_set_timer_to_on(self, minutes: int) -> None:
+        """Set the 'timer to on' duration, in minutes."""
+        _LOGGER.debug("%s: Setting timer-to-on to %s min", self.name, minutes)
+        await self._async_set_duration(
+            [20, 4] + self._minutes_seconds_bytes(minutes), timer_to_on=int(minutes)
+        )
+
+    async def async_set_timer_to_off(self, minutes: int) -> None:
+        """Set the 'timer to off' duration, in minutes."""
+        _LOGGER.debug("%s: Setting timer-to-off to %s min", self.name, minutes)
+        await self._async_set_duration(
+            [21, 4] + self._minutes_seconds_bytes(minutes), timer_to_off=int(minutes)
+        )
+
+    async def async_set_cycle(self, on_minutes: int, off_minutes: int) -> None:
+        """Set the cycle on/off durations, in minutes."""
+        _LOGGER.debug(
+            "%s: Setting cycle to on=%s off=%s min", self.name, on_minutes, off_minutes
+        )
+        await self._async_set_duration(
+            [22, 8]
+            + self._minutes_seconds_bytes(on_minutes)
+            + self._minutes_seconds_bytes(off_minutes),
+            cycle_on=int(on_minutes),
+            cycle_off=int(off_minutes),
+        )
+
+    async def async_set_cycle_on(self, minutes: int) -> None:
+        """Set the cycle 'on' duration (minutes), keeping the current off."""
+        await self.async_set_cycle(int(minutes), self.state.cycle_off or 0)
+
+    async def async_set_cycle_off(self, minutes: int) -> None:
+        """Set the cycle 'off' duration (minutes), keeping the current on."""
+        await self.async_set_cycle(self.state.cycle_on or 0, int(minutes))
 
     async def async_set_max_speed(self, value: int) -> None:
         """Set the maximum fan speed for auto and other dynamic modes."""

@@ -6,7 +6,8 @@ from typing import Optional
 
 from homeassistant.components.number import NumberDeviceClass, NumberEntity
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import PERCENTAGE, EntityCategory, UnitOfTemperature
+from homeassistant.const import (PERCENTAGE, EntityCategory, UnitOfTemperature,
+                                 UnitOfTime)
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.entity import DeviceInfo
@@ -51,6 +52,26 @@ async def async_setup_entry(
                           lambda d: None if d.auto_mode is None else d.auto_mode.low_temp,
                           ACInfinityDevice.async_set_auto_low_temp),
         SpeedNumber(data.coordinator, data.device, "Fan Speed"),
+        DurationNumber(data.coordinator,
+                       data.device,
+                       "Timer to On Duration",
+                       lambda d: d.state.timer_to_on,
+                       ACInfinityDevice.async_set_timer_to_on),
+        DurationNumber(data.coordinator,
+                       data.device,
+                       "Timer to Off Duration",
+                       lambda d: d.state.timer_to_off,
+                       ACInfinityDevice.async_set_timer_to_off),
+        DurationNumber(data.coordinator,
+                       data.device,
+                       "Cycle On Duration",
+                       lambda d: d.state.cycle_on,
+                       ACInfinityDevice.async_set_cycle_on),
+        DurationNumber(data.coordinator,
+                       data.device,
+                       "Cycle Off Duration",
+                       lambda d: d.state.cycle_off,
+                       ACInfinityDevice.async_set_cycle_off),
     ]
 
     async_add_entities(entities)
@@ -164,3 +185,32 @@ class SpeedNumber(ACInfinityNumber):
 
     async def async_set_native_value(self, value: float) -> None:
         await self._device.set_speed(int(value))
+
+
+class DurationNumber(ACInfinityNumber):
+    """A timer/cycle duration, in minutes (the wire format is seconds)."""
+
+    _attr_native_min_value = 0
+    _attr_native_max_value = 1440  # 24 hours
+    _attr_native_step = 1
+    _attr_native_unit_of_measurement = UnitOfTime.MINUTES
+    _attr_icon = "mdi:timer-outline"
+
+    def __init__(
+        self,
+        coordinator: ACInfinityDataUpdateCoordinator,
+        device: ACInfinityDevice,
+        name: str,
+        get_value: Callable[[ACInfinityDevice], Optional[int]],
+        async_set_value: Callable[[ACInfinityDevice, int], Awaitable[None]],
+    ) -> None:
+        self._get_value = get_value
+        self._async_set_value = async_set_value
+        super().__init__(coordinator, device, name)
+
+    @callback
+    def _update_attrs(self) -> None:
+        self._attr_native_value = self._get_value(self._device)
+
+    async def async_set_native_value(self, value: float) -> None:
+        await self._async_set_value(self._device, int(value))
