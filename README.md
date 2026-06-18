@@ -105,8 +105,7 @@ For an AIRTAP, the integration creates:
 
 | Entity | Domain | Description |
 | --- | --- | --- |
-| **Fan** | `fan` | On/off, speed 1–10 (as %), and an **Auto** preset. |
-| **Mode** | `select` | Operating mode: **Off / On / Auto / Timer to On / Timer to Off / Cycle**. |
+| **Fan** | `fan` | The single control: on/off (manual), speed 1–10 (as %), and **preset modes** for the device's operating modes — **Auto / Timer to On / Timer to Off / Cycle**. |
 | **Fan Speed** | `number` | Manually set the running speed (0–10). Setting it turns the fan on at that speed. |
 | **Fan Speed** | `sensor` | Read-only live running speed (0–10) with `measurement` state class — for history/graphs. |
 | **Temperature** | `sensor` | The fan's onboard temperature reading. |
@@ -114,7 +113,7 @@ For an AIRTAP, the integration creates:
 | **Auto Mode High/Low Temperature** | `number` | Temperature thresholds for the Auto-mode thermostat. |
 | **Auto Mode High/Low Temperature Trigger** | `switch` | Enable/disable each Auto temperature trigger. |
 
-> The operating mode is not present in the fan's Bluetooth advertisements, so **Mode** can read *unknown* for the first ~30 s after a restart until the first poll completes; it updates instantly thereafter.
+> The device's true state is `mode` + `speed`; the fan entity is a friendly wrapper over it. **Off** = the device's Off mode; **on** = any running mode (On/Auto/Timer/Cycle), with the percentage showing the live speed. The operating mode isn't in the fan's Bluetooth advertisements, so the fan's **preset** may be blank for the first ~30 s after a restart until the first poll completes; it updates instantly thereafter.
 
 ## Example automation
 
@@ -128,16 +127,11 @@ automation:
         entity_id: sensor.living_room_temperature
         above: 78
     action:
-      - service: select.select_option
+      - service: fan.turn_on
         target:
-          entity_id: select.d_6l1x2_mode
+          entity_id: fan.d_6l1x2_fan
         data:
-          option: "On"
-      - service: number.set_value
-        target:
-          entity_id: number.d_6l1x2_fan_speed
-        data:
-          value: 10
+          percentage: 100
 
   - alias: "AIRTAP off when cool"
     trigger:
@@ -145,14 +139,12 @@ automation:
         entity_id: sensor.living_room_temperature
         below: 74
     action:
-      - service: select.select_option
+      - service: fan.turn_off
         target:
-          entity_id: select.d_6l1x2_mode
-        data:
-          option: "Off"
+          entity_id: fan.d_6l1x2_fan
 ```
 
-*(Replace the entity IDs with your own.)*
+*(Replace the entity IDs with your own.)* To switch into an automatic mode instead, use `fan.set_preset_mode` with one of `Auto`, `Timer to On`, `Timer to Off`, or `Cycle`.
 
 ## Troubleshooting
 
@@ -175,11 +167,11 @@ logger:
 
 ## Changes in this fork
 
-- **`select` — operating-mode selector** (Off / On / Auto / Timer to On / Timer to Off / Cycle).
+- **Operating modes as fan presets** — Auto / Timer to On / Timer to Off / Cycle are exposed as the fan entity's preset modes (manual On/Off is the power toggle), so the fan card is the single, self-consistent control.
 - **`number` — manual Fan Speed** (0–10) that sets the running speed and reads the live value.
 - **`sensor` — Fan Speed** (read-only, `measurement` state class) for logging and statistics.
 - **Config-flow fix**: skip non-AC-Infinity BLE devices during discovery so manual *"Add Integration"* no longer 500s.
-- Snappier UI: the **Mode** select reflects changes immediately instead of waiting for the next poll.
+- The fan toggle mirrors the operating mode (off only in Off mode) and reflects mode changes immediately instead of waiting for the next poll.
 
 ## Credits
 

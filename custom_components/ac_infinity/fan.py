@@ -17,12 +17,27 @@ from homeassistant.util.percentage import (int_states_in_range,
 from .const import DEVICE_MODEL, DOMAIN, MANUFACTURER
 from .coordinator import (ACInfinityDataUpdateCoordinator,
                           ActiveBluetoothCoordinatorEntity)
-from .device import WORK_TYPE_AUTO, WORK_TYPE_OFF, ACInfinityDevice
+from .device import (WORK_TYPE_AUTO, WORK_TYPE_CYCLE, WORK_TYPE_OFF,
+                     WORK_TYPE_TIMER_TO_OFF, WORK_TYPE_TIMER_TO_ON,
+                     ACInfinityDevice)
 from .models import ACInfinityData
 
 SPEED_RANGE = (1, 10)
 
-PRESET_AUTO_MODE = "Auto"
+# Fan presets map onto the device's non-manual operating modes. On/Off are
+# represented by the fan's power toggle, so they are not presets.
+PRESET_AUTO = "Auto"
+PRESET_TIMER_TO_ON = "Timer to On"
+PRESET_TIMER_TO_OFF = "Timer to Off"
+PRESET_CYCLE = "Cycle"
+
+PRESET_TO_WORK_TYPE = {
+    PRESET_AUTO: WORK_TYPE_AUTO,
+    PRESET_TIMER_TO_ON: WORK_TYPE_TIMER_TO_ON,
+    PRESET_TIMER_TO_OFF: WORK_TYPE_TIMER_TO_OFF,
+    PRESET_CYCLE: WORK_TYPE_CYCLE,
+}
+WORK_TYPE_TO_PRESET = {v: k for k, v in PRESET_TO_WORK_TYPE.items()}
 
 
 async def async_setup_entry(
@@ -45,7 +60,7 @@ class ACInfinityFan(
         | FanEntityFeature.TURN_ON
         | FanEntityFeature.PRESET_MODE
     )
-    _attr_preset_modes = [PRESET_AUTO_MODE]
+    _attr_preset_modes = list(PRESET_TO_WORK_TYPE)
 
     def __init__(
         self,
@@ -91,10 +106,10 @@ class ACInfinityFan(
         await self._device.turn_off()
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
-        if preset_mode == PRESET_AUTO_MODE:
-            await self._device.set_mode_auto()
-        else:
+        work_type = PRESET_TO_WORK_TYPE.get(preset_mode)
+        if work_type is None:
             raise ValueError(f"Unsupported preset mode: {preset_mode}")
+        await self._device.async_set_mode(work_type)
 
     @callback
     def _update_attrs(self) -> None:
@@ -109,9 +124,7 @@ class ACInfinityFan(
             self._attr_is_on = bool(self._device.state.fan)
         else:
             self._attr_is_on = work_type != WORK_TYPE_OFF
-        self._attr_preset_mode = (
-            PRESET_AUTO_MODE if work_type == WORK_TYPE_AUTO else None
-        )
+        self._attr_preset_mode = WORK_TYPE_TO_PRESET.get(work_type)
         self._attr_percentage = ranged_value_to_percentage(
             SPEED_RANGE, self._device.state.fan or 0
         )
