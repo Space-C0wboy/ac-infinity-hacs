@@ -17,6 +17,19 @@ from .const import FAMILY_E_MODELS
 WORK_TYPE_OFF = 1
 WORK_TYPE_ON = 2
 WORK_TYPE_AUTO = 3
+WORK_TYPE_TIMER_TO_ON = 4
+WORK_TYPE_TIMER_TO_OFF = 5
+WORK_TYPE_CYCLE = 6
+
+# work_type values that are valid operating modes for the device
+WORK_TYPES = (
+    WORK_TYPE_OFF,
+    WORK_TYPE_ON,
+    WORK_TYPE_AUTO,
+    WORK_TYPE_TIMER_TO_ON,
+    WORK_TYPE_TIMER_TO_OFF,
+    WORK_TYPE_CYCLE,
+)
 
 _LOGGER = logging.getLogger(ACInfinityController.__module__)
 _MIN_SECONDS_BETWEEN_POLLS = 30
@@ -151,10 +164,16 @@ class ACInfinityDevice(ACInfinityController):
 
     async def set_mode_auto(self) -> None:
         """Set the device's mode to automatic."""
-        await self._ensure_connected()
-        _LOGGER.debug("%s: Setting mode to auto", self.name)
+        await self.async_set_mode(WORK_TYPE_AUTO)
 
-        command = [16, 1, WORK_TYPE_AUTO]
+    async def async_set_mode(self, work_type: int) -> None:
+        """Set the device's operating mode (work_type)."""
+        if work_type not in WORK_TYPES:
+            raise ValueError(f"Unsupported work_type: {work_type}")
+
+        _LOGGER.debug("%s: Setting mode to %s", self.name, work_type)
+
+        command = [16, 1, work_type]
         if self.state.type in FAMILY_E_MODELS:
             command += [255, 0]
         command = self._protocol._add_head(command, 3, self.sequence)
@@ -162,7 +181,7 @@ class ACInfinityDevice(ACInfinityController):
         try:
             await self._send_command(command)
 
-            self.state.work_type = WORK_TYPE_AUTO
+            self.state.work_type = work_type
             self._config_changed_since_last_update = True
         finally:
             await self._execute_disconnect()
