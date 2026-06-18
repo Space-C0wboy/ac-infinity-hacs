@@ -105,7 +105,8 @@ For an AIRTAP, the integration creates:
 
 | Entity | Domain | Description |
 | --- | --- | --- |
-| **Fan** | `fan` | The single control: on/off (manual), speed 1–10 (as %), and **preset modes** for the device's operating modes — **Auto / Timer to On / Timer to Off / Cycle**. |
+| **Fan** | `fan` | On/off (manual), speed 1–10 (as %), and **preset modes** — **Auto / Timer to On / Timer to Off / Cycle**. |
+| **Mode** | `select` | Standalone dropdown for the full operating mode — **Off / On / Auto / Timer to On / Timer to Off / Cycle**. Mirrors the fan's power + presets; both stay in sync. |
 | **Fan Speed** | `number` | Manually set the running speed (0–10). Setting it turns the fan on at that speed. |
 | **Fan Speed** | `sensor` | Read-only live running speed (0–10) with `measurement` state class — for history/graphs. |
 | **Temperature** | `sensor` | The fan's onboard temperature reading. |
@@ -167,7 +168,7 @@ logger:
 
 ## Changes in this fork
 
-- **Operating modes as fan presets** — Auto / Timer to On / Timer to Off / Cycle are exposed as the fan entity's preset modes (manual On/Off is the power toggle), so the fan card is the single, self-consistent control.
+- **Operating modes, two synced ways** — as the fan entity's **preset modes** (Auto / Timer to On / Timer to Off / Cycle, with On/Off as the power toggle) **and** a standalone **`select` — Mode** dropdown (full Off / On / Auto / Timer / Cycle). Use whichever you like; they reflect the same state.
 - **`number` — manual Fan Speed** (0–10) that sets the running speed and reads the live value.
 - **`sensor` — Fan Speed** (read-only, `measurement` state class) for logging and statistics.
 - **Config-flow fix**: skip non-AC-Infinity BLE devices during discovery so manual *"Add Integration"* no longer 500s.
