@@ -24,7 +24,10 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     data: ACInfinityData = hass.data[DOMAIN][entry.entry_id]
-    entities = [TemperatureSensor(data.coordinator, data.device, "Temperature")]
+    entities = [
+        TemperatureSensor(data.coordinator, data.device, "Temperature"),
+        FanSpeedSensor(data.coordinator, data.device, "Fan Speed"),
+    ]
 
     if data.device.state.type not in [6]:  # Airtap does not have humidity
         entities.append(HumiditySensor(data.coordinator, data.device, "Humidity"))
@@ -100,3 +103,15 @@ class VpdSensor(ACInfinitySensor):
     def _update_attrs(self) -> None:
         """Handle updating _attr values."""
         self._attr_native_value = self._device.vpd
+
+
+class FanSpeedSensor(ACInfinitySensor):
+    """Read-only, loggable current fan speed (0-10) from BLE advertisements."""
+
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_icon = "mdi:fan"
+
+    @callback
+    def _update_attrs(self) -> None:
+        """Handle updating _attr values."""
+        self._attr_native_value = self._device.speed
