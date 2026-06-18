@@ -48,6 +48,12 @@ class DeviceInfoEx(DeviceInfo):
     timer_to_off: Optional[int] = None
     cycle_on: Optional[int] = None
     cycle_off: Optional[int] = None
+    # Read from an optional secondary poll (params 24/33/35/36). Read-only for
+    # now until the on-wire formats are verified against the app.
+    time_remaining: Optional[int] = None       # minutes (best-effort decode)
+    backlight: Optional[int] = None            # raw brightness gear
+    temp_calibration: Optional[int] = None     # degrees C (signed)
+    temp_buffer: Optional[int] = None          # degrees C
 
 
 @dataclass
@@ -185,6 +191,40 @@ class ACInfinityDevice(ACInfinityController):
 
                     self._config_changed_since_last_update = False
                     self._fire_callbacks(CallbackType.UPDATE_RESPONSE)
+
+            # Best-effort secondary read of params not in the standard model
+            # response: 24 (time remaining), 33 (backlight), 35 (temp buffer),
+            # 36 (temp calibration). Isolated so a failure never breaks the main
+            # poll. Formats are decoded from the v1.5.8 source and remain
+            # read-only until verified against the official app.
+            try:
+                extra = [24, 33, 35, 36]
+                if self.state.type in FAMILY_E_MODELS:
+                    extra = extra + [255, 0]
+                cmd = self._protocol._add_head(extra, 1, self.sequence)
+                if data2 := await self._send_command(cmd):
+                    tl2: dict[int, bytes] = {}
+                    plen2 = (data2[2] << 8) | data2[3]
+                    j = 10
+                    end2 = min(10 + plen2, len(data2))
+                    while j + 1 < end2:
+                        tl2[data2[j]] = data2[j + 2:j + 2 + data2[j + 1]]
+                        j += 2 + data2[j + 1]
+                    if (v := tl2.get(24)) and len(v) >= 4:
+                        self.state.time_remaining = int.from_bytes(v[:4], "big") // 60
+                    if (v := tl2.get(33)) and len(v) >= 1:
+                        self.state.backlight = v[0]
+                    if (v := tl2.get(35)) and len(v) >= 2:
+                        self.state.temp_buffer = v[1]
+                    if (v := tl2.get(36)) and len(v) >= 2:
+                        self.state.temp_calibration = int.from_bytes(
+                            v[1:2], "big", signed=True
+                        )
+                    self._fire_callbacks(CallbackType.UPDATE_RESPONSE)
+            except Exception:  # pylint: disable=broad-except
+                _LOGGER.debug(
+                    "%s: optional extra-params read failed", self.name, exc_info=True
+                )
         finally:
             await self._execute_disconnect()
 
