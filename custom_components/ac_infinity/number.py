@@ -50,6 +50,7 @@ async def async_setup_entry(
                           "Auto Mode Low Temperature",
                           lambda d: None if d.auto_mode is None else d.auto_mode.low_temp,
                           ACInfinityDevice.async_set_auto_low_temp),
+        SpeedNumber(data.coordinator, data.device, "Fan Speed"),
     ]
 
     async_add_entities(entities)
@@ -141,3 +142,25 @@ class TemperatureNumber(ACInfinityNumber):
 
     async def async_set_native_value(self, value: float) -> None:
         await self._async_set_value(self._device, value)
+
+
+class SpeedNumber(ACInfinityNumber):
+    """The live fan speed (0-10). Reads the current running speed and sets it.
+
+    Setting this drives the fan to a manual speed (and turns it on); the read
+    value reflects the actual speed reported in the device's advertisements, so
+    it tracks the speed even in Auto/Cycle modes.
+    """
+
+    _attr_entity_category = None  # primary control, not tucked under "config"
+    _attr_native_min_value = 0
+    _attr_native_max_value = 10
+    _attr_native_step = 1
+    _attr_icon = "mdi:fan"
+
+    @callback
+    def _update_attrs(self) -> None:
+        self._attr_native_value = self._device.speed
+
+    async def async_set_native_value(self, value: float) -> None:
+        await self._device.set_speed(int(value))

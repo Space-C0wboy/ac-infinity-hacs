@@ -183,6 +183,9 @@ class ACInfinityDevice(ACInfinityController):
 
             self.state.work_type = work_type
             self._config_changed_since_last_update = True
+            # Push the new mode to HA entities immediately rather than waiting
+            # for the next poll (work_type is not present in advertisements).
+            self._fire_callbacks(CallbackType.UPDATE_RESPONSE)
         finally:
             await self._execute_disconnect()
 
