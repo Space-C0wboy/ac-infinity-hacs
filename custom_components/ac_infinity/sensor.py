@@ -50,7 +50,7 @@ class ACInfinitySensor(
     ) -> None:
         super().__init__(coordinator)
         self._device = device
-        self._name = name
+        self._attr_name = name
         self._attr_unique_id = f"{self._device.address}_{slugify(name)}"
         self._attr_device_info = DeviceInfo(
             name=device.name,
