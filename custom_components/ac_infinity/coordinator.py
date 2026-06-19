@@ -115,5 +115,13 @@ class ActiveBluetoothCoordinatorEntity[
 
     @property
     def available(self) -> bool:
-        """Return if entity is available."""
-        return self.coordinator.available and self.coordinator.last_poll_successful
+        """Return if entity is available.
+
+        Availability tracks whether the device is still being heard over
+        Bluetooth (recent advertisements). A single failed *poll* no longer
+        marks the device unavailable: on a marginal / single-proxy link polls
+        fail intermittently, and flapping to unavailable on every miss is worse
+        than keeping the last-known values until the next successful poll. If
+        the device truly goes away, advertisements stop and it goes unavailable.
+        """
+        return self.coordinator.available

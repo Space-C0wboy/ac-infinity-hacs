@@ -32,7 +32,10 @@ WORK_TYPES = (
 )
 
 _LOGGER = logging.getLogger(ACInfinityController.__module__)
-_MIN_SECONDS_BETWEEN_POLLS = 30
+# Connecting suppresses the fan's advertisements and ties up a single proxy's
+# radio, so poll sparingly (settings change rarely; user changes still trigger
+# an immediate poll via _config_changed_since_last_update).
+_MIN_SECONDS_BETWEEN_POLLS = 90
 
 
 @dataclass
