@@ -407,6 +407,26 @@ class ACInfinityDevice(ACInfinityController):
         """Set the cycle 'off' duration (minutes), keeping the current on."""
         await self.async_set_cycle(self.state.cycle_on or 0, int(minutes))
 
+    async def async_set_backlight(self, value: int) -> None:
+        """Set the display backlight brightness gear."""
+        _LOGGER.debug("%s: Setting backlight to %s", self.name, value)
+        await self._async_set_duration(
+            [33, 1, int(value) & 0xFF], backlight=int(value)
+        )
+
+    async def async_set_temp_calibration(self, celsius: int) -> None:
+        """Set the temperature calibration offset, in degrees C.
+
+        The wire format carries both a degF and degC byte (the device uses the
+        one matching its display unit); this mirrors the official app's encoding.
+        """
+        c = int(celsius)
+        f = round(c * 9 / 5 + 32)
+        _LOGGER.debug("%s: Setting temp calibration to %s C", self.name, c)
+        await self._async_set_duration(
+            [36, 3, f & 0xFF, c & 0xFF, 0], temp_calibration=c
+        )
+
     async def async_set_max_speed(self, value: int) -> None:
         """Set the maximum fan speed for auto and other dynamic modes."""
         if value not in range(0, 11):

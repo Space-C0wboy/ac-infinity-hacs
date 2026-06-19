@@ -72,6 +72,19 @@ async def async_setup_entry(
                        "Cycle Off Duration",
                        lambda d: d.state.cycle_off,
                        ACInfinityDevice.async_set_cycle_off),
+        ConfigNumber(data.coordinator,
+                     data.device,
+                     "Backlight",
+                     lambda d: d.state.backlight,
+                     ACInfinityDevice.async_set_backlight,
+                     0, 10, icon="mdi:brightness-6"),
+        ConfigNumber(data.coordinator,
+                     data.device,
+                     "Temperature Calibration",
+                     lambda d: d.state.temp_calibration,
+                     ACInfinityDevice.async_set_temp_calibration,
+                     -10, 10, unit=UnitOfTemperature.CELSIUS,
+                     icon="mdi:thermometer-plus"),
     ]
 
     async_add_entities(entities)
@@ -207,6 +220,41 @@ class DurationNumber(ACInfinityNumber):
         self._get_value = get_value
         self._async_set_value = async_set_value
         super().__init__(coordinator, device, name)
+
+    @callback
+    def _update_attrs(self) -> None:
+        self._attr_native_value = self._get_value(self._device)
+
+    async def async_set_native_value(self, value: float) -> None:
+        await self._async_set_value(self._device, int(value))
+
+
+class ConfigNumber(ACInfinityNumber):
+    """A generic integer config number backed by getter/setter callables."""
+
+    def __init__(
+        self,
+        coordinator: ACInfinityDataUpdateCoordinator,
+        device: ACInfinityDevice,
+        name: str,
+        get_value: Callable[[ACInfinityDevice], Optional[int]],
+        async_set_value: Callable[[ACInfinityDevice, int], Awaitable[None]],
+        min_value: float,
+        max_value: float,
+        step: float = 1,
+        unit: Optional[str] = None,
+        device_class: Optional[NumberDeviceClass] = None,
+        icon: Optional[str] = None,
+    ) -> None:
+        self._get_value = get_value
+        self._async_set_value = async_set_value
+        super().__init__(coordinator, device, name)
+        self._attr_native_min_value = min_value
+        self._attr_native_max_value = max_value
+        self._attr_native_step = step
+        self._attr_native_unit_of_measurement = unit
+        self._attr_device_class = device_class
+        self._attr_icon = icon
 
     @callback
     def _update_attrs(self) -> None:

@@ -34,18 +34,6 @@ async def async_setup_entry(
         GenericSensor(data.coordinator, data.device, "Time Remaining",
                       lambda d: d.state.time_remaining,
                       unit=UnitOfTime.MINUTES, icon="mdi:timer-sand"),
-        GenericSensor(data.coordinator, data.device, "Backlight",
-                      lambda d: d.state.backlight,
-                      entity_category=EntityCategory.DIAGNOSTIC,
-                      icon="mdi:brightness-6"),
-        GenericSensor(data.coordinator, data.device, "Temperature Calibration",
-                      lambda d: d.state.temp_calibration,
-                      unit=UnitOfTemperature.CELSIUS,
-                      entity_category=EntityCategory.DIAGNOSTIC),
-        GenericSensor(data.coordinator, data.device, "Temperature Buffer",
-                      lambda d: d.state.temp_buffer,
-                      unit=UnitOfTemperature.CELSIUS,
-                      entity_category=EntityCategory.DIAGNOSTIC),
     ]
 
     if data.device.state.type not in [6]:  # Airtap does not have humidity
