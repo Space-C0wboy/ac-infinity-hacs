@@ -1,0 +1,14 @@
+pytest-homeassistant-custom-component==0.13.368
+ac-infinity-ble==0.4.3
+# ac-infinity-ble imports it without declaring it; Home Assistant ships it
+async-timeout
+# what HA's bluetooth/usb components need to import (from their manifests at HA 2026.10.0b0)
+aiousbwatcher==1.1.2
+bleak-retry-connector==4.7.1
+bleak==3.0.2
+bluetooth-adapters==2.4.0
+bluetooth-auto-recovery==1.6.4
+bluetooth-data-tools==1.29.24
+dbus-fast==5.0.22
+habluetooth==7.1.2
+serialx==1.11.0
