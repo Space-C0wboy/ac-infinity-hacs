@@ -1,4 +1,5 @@
 """Shared fixtures."""
+
 import pytest
 
 

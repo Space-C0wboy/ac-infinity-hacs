@@ -10,16 +10,22 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util import slugify
-from homeassistant.util.percentage import (int_states_in_range,
-                                           percentage_to_ranged_value,
-                                           ranged_value_to_percentage)
+from homeassistant.util.percentage import (
+    int_states_in_range,
+    percentage_to_ranged_value,
+    ranged_value_to_percentage,
+)
 
 from .const import DEVICE_MODEL, DOMAIN, MANUFACTURER
-from .coordinator import (ACInfinityDataUpdateCoordinator,
-                          ActiveBluetoothCoordinatorEntity)
-from .device import (WORK_TYPE_AUTO, WORK_TYPE_CYCLE, WORK_TYPE_OFF,
-                     WORK_TYPE_TIMER_TO_OFF, WORK_TYPE_TIMER_TO_ON,
-                     ACInfinityDevice)
+from .coordinator import ACInfinityDataUpdateCoordinator, ActiveBluetoothCoordinatorEntity
+from .device import (
+    WORK_TYPE_AUTO,
+    WORK_TYPE_CYCLE,
+    WORK_TYPE_OFF,
+    WORK_TYPE_TIMER_TO_OFF,
+    WORK_TYPE_TIMER_TO_ON,
+    ACInfinityDevice,
+)
 from .models import ACInfinityData
 
 SPEED_RANGE = (1, 10)
@@ -49,9 +55,7 @@ async def async_setup_entry(
     async_add_entities([ACInfinityFan(data.coordinator, data.device, "Fan")])
 
 
-class ACInfinityFan(
-    ActiveBluetoothCoordinatorEntity[ACInfinityDataUpdateCoordinator], FanEntity
-):
+class ACInfinityFan(ActiveBluetoothCoordinatorEntity[ACInfinityDataUpdateCoordinator], FanEntity):
     _attr_has_entity_name = True
     _attr_speed_count = int_states_in_range(SPEED_RANGE)
     _attr_supported_features = (
@@ -125,9 +129,7 @@ class ACInfinityFan(
         else:
             self._attr_is_on = work_type != WORK_TYPE_OFF
         self._attr_preset_mode = WORK_TYPE_TO_PRESET.get(work_type)
-        self._attr_percentage = ranged_value_to_percentage(
-            SPEED_RANGE, self._device.state.fan or 0
-        )
+        self._attr_percentage = ranged_value_to_percentage(SPEED_RANGE, self._device.state.fan or 0)
 
     @callback
     def _handle_coordinator_update(self) -> None:

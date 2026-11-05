@@ -2,23 +2,19 @@ from __future__ import annotations
 
 import math
 from collections.abc import Awaitable, Callable
-from typing import Optional
 
 from homeassistant.components.number import NumberDeviceClass, NumberEntity
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (PERCENTAGE, EntityCategory, UnitOfTemperature,
-                                 UnitOfTime)
+from homeassistant.const import PERCENTAGE, EntityCategory, UnitOfTemperature, UnitOfTime
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util import slugify
-from homeassistant.util.percentage import (percentage_to_ranged_value,
-                                           ranged_value_to_percentage)
+from homeassistant.util.percentage import percentage_to_ranged_value, ranged_value_to_percentage
 
 from .const import DEVICE_MODEL, DOMAIN, MANUFACTURER
-from .coordinator import (ACInfinityDataUpdateCoordinator,
-                          ActiveBluetoothCoordinatorEntity)
+from .coordinator import ACInfinityDataUpdateCoordinator, ActiveBluetoothCoordinatorEntity
 from .device import ACInfinityDevice
 from .fan import SPEED_RANGE
 from .models import ACInfinityData
@@ -31,60 +27,84 @@ async def async_setup_entry(
 ) -> None:
     data: ACInfinityData = hass.data[DOMAIN][entry.entry_id]
     entities: list[ACInfinityNumber] = [
-        PercentageNumber(data.coordinator,
-                         data.device,
-                         "Min Speed",
-                         lambda d: d.min_speed,
-                         ACInfinityDevice.async_set_min_speed),
-        PercentageNumber(data.coordinator,
-                         data.device,
-                         "Max Speed",
-                         lambda d: d.max_speed,
-                         ACInfinityDevice.async_set_max_speed),
-        TemperatureNumber(data.coordinator,
-                          data.device,
-                          "Auto Mode High Temperature",
-                          lambda d: None if d.auto_mode is None else d.auto_mode.high_temp,
-                          ACInfinityDevice.async_set_auto_high_temp),
-        TemperatureNumber(data.coordinator,
-                          data.device,
-                          "Auto Mode Low Temperature",
-                          lambda d: None if d.auto_mode is None else d.auto_mode.low_temp,
-                          ACInfinityDevice.async_set_auto_low_temp),
+        PercentageNumber(
+            data.coordinator,
+            data.device,
+            "Min Speed",
+            lambda d: d.min_speed,
+            ACInfinityDevice.async_set_min_speed,
+        ),
+        PercentageNumber(
+            data.coordinator,
+            data.device,
+            "Max Speed",
+            lambda d: d.max_speed,
+            ACInfinityDevice.async_set_max_speed,
+        ),
+        TemperatureNumber(
+            data.coordinator,
+            data.device,
+            "Auto Mode High Temperature",
+            lambda d: None if d.auto_mode is None else d.auto_mode.high_temp,
+            ACInfinityDevice.async_set_auto_high_temp,
+        ),
+        TemperatureNumber(
+            data.coordinator,
+            data.device,
+            "Auto Mode Low Temperature",
+            lambda d: None if d.auto_mode is None else d.auto_mode.low_temp,
+            ACInfinityDevice.async_set_auto_low_temp,
+        ),
         SpeedNumber(data.coordinator, data.device, "Fan Speed"),
-        DurationNumber(data.coordinator,
-                       data.device,
-                       "Timer to On Duration",
-                       lambda d: d.state.timer_to_on,
-                       ACInfinityDevice.async_set_timer_to_on),
-        DurationNumber(data.coordinator,
-                       data.device,
-                       "Timer to Off Duration",
-                       lambda d: d.state.timer_to_off,
-                       ACInfinityDevice.async_set_timer_to_off),
-        DurationNumber(data.coordinator,
-                       data.device,
-                       "Cycle On Duration",
-                       lambda d: d.state.cycle_on,
-                       ACInfinityDevice.async_set_cycle_on),
-        DurationNumber(data.coordinator,
-                       data.device,
-                       "Cycle Off Duration",
-                       lambda d: d.state.cycle_off,
-                       ACInfinityDevice.async_set_cycle_off),
-        ConfigNumber(data.coordinator,
-                     data.device,
-                     "Backlight",
-                     lambda d: d.state.backlight,
-                     ACInfinityDevice.async_set_backlight,
-                     0, 10, icon="mdi:brightness-6"),
-        ConfigNumber(data.coordinator,
-                     data.device,
-                     "Temperature Calibration",
-                     lambda d: d.state.temp_calibration,
-                     ACInfinityDevice.async_set_temp_calibration,
-                     -10, 10, unit=UnitOfTemperature.CELSIUS,
-                     icon="mdi:thermometer-plus"),
+        DurationNumber(
+            data.coordinator,
+            data.device,
+            "Timer to On Duration",
+            lambda d: d.state.timer_to_on,
+            ACInfinityDevice.async_set_timer_to_on,
+        ),
+        DurationNumber(
+            data.coordinator,
+            data.device,
+            "Timer to Off Duration",
+            lambda d: d.state.timer_to_off,
+            ACInfinityDevice.async_set_timer_to_off,
+        ),
+        DurationNumber(
+            data.coordinator,
+            data.device,
+            "Cycle On Duration",
+            lambda d: d.state.cycle_on,
+            ACInfinityDevice.async_set_cycle_on,
+        ),
+        DurationNumber(
+            data.coordinator,
+            data.device,
+            "Cycle Off Duration",
+            lambda d: d.state.cycle_off,
+            ACInfinityDevice.async_set_cycle_off,
+        ),
+        ConfigNumber(
+            data.coordinator,
+            data.device,
+            "Backlight",
+            lambda d: d.state.backlight,
+            ACInfinityDevice.async_set_backlight,
+            0,
+            10,
+            icon="mdi:brightness-6",
+        ),
+        ConfigNumber(
+            data.coordinator,
+            data.device,
+            "Temperature Calibration",
+            lambda d: d.state.temp_calibration,
+            ACInfinityDevice.async_set_temp_calibration,
+            -10,
+            10,
+            unit=UnitOfTemperature.CELSIUS,
+            icon="mdi:thermometer-plus",
+        ),
     ]
 
     async_add_entities(entities)
@@ -93,9 +113,7 @@ async def async_setup_entry(
 class ACInfinityNumber(
     ActiveBluetoothCoordinatorEntity[ACInfinityDataUpdateCoordinator], NumberEntity
 ):
-    _attr_entity_category = (
-        EntityCategory.CONFIG
-    )
+    _attr_entity_category = EntityCategory.CONFIG
     _attr_has_entity_name = True
 
     def __init__(
@@ -136,7 +154,7 @@ class PercentageNumber(ACInfinityNumber):
         coordinator: ACInfinityDataUpdateCoordinator,
         device: ACInfinityDevice,
         name: str,
-        get_value: Callable[[ACInfinityDevice], Optional[int]],
+        get_value: Callable[[ACInfinityDevice], int | None],
         async_set_value: Callable[[ACInfinityDevice, int], Awaitable[None]],
     ) -> None:
         self._get_value = get_value
@@ -146,10 +164,14 @@ class PercentageNumber(ACInfinityNumber):
     @callback
     def _update_attrs(self) -> None:
         value = self._get_value(self._device)
-        self._attr_native_value = None if value is None else ranged_value_to_percentage(SPEED_RANGE, value)
+        self._attr_native_value = (
+            None if value is None else ranged_value_to_percentage(SPEED_RANGE, value)
+        )
 
     async def async_set_native_value(self, value: float) -> None:
-        await self._async_set_value(self._device, math.ceil(percentage_to_ranged_value(SPEED_RANGE, value)))
+        await self._async_set_value(
+            self._device, math.ceil(percentage_to_ranged_value(SPEED_RANGE, value))
+        )
 
 
 class TemperatureNumber(ACInfinityNumber):
@@ -163,7 +185,7 @@ class TemperatureNumber(ACInfinityNumber):
         coordinator: ACInfinityDataUpdateCoordinator,
         device: ACInfinityDevice,
         name: str,
-        get_value: Callable[[ACInfinityDevice], Optional[float]],
+        get_value: Callable[[ACInfinityDevice], float | None],
         async_set_value: Callable[[ACInfinityDevice, float], Awaitable[None]],
     ) -> None:
         self._get_value = get_value
@@ -214,7 +236,7 @@ class DurationNumber(ACInfinityNumber):
         coordinator: ACInfinityDataUpdateCoordinator,
         device: ACInfinityDevice,
         name: str,
-        get_value: Callable[[ACInfinityDevice], Optional[int]],
+        get_value: Callable[[ACInfinityDevice], int | None],
         async_set_value: Callable[[ACInfinityDevice, int], Awaitable[None]],
     ) -> None:
         self._get_value = get_value
@@ -237,14 +259,14 @@ class ConfigNumber(ACInfinityNumber):
         coordinator: ACInfinityDataUpdateCoordinator,
         device: ACInfinityDevice,
         name: str,
-        get_value: Callable[[ACInfinityDevice], Optional[int]],
+        get_value: Callable[[ACInfinityDevice], int | None],
         async_set_value: Callable[[ACInfinityDevice, int], Awaitable[None]],
         min_value: float,
         max_value: float,
         step: float = 1,
-        unit: Optional[str] = None,
-        device_class: Optional[NumberDeviceClass] = None,
-        icon: Optional[str] = None,
+        unit: str | None = None,
+        device_class: NumberDeviceClass | None = None,
+        icon: str | None = None,
     ) -> None:
         self._get_value = get_value
         self._async_set_value = async_set_value
