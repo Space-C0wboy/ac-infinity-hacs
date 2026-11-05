@@ -1,6 +1,6 @@
 # Lint and format config; the pinned ruff version lives in requirements-lint.txt.
 line-length = 100
-target-version = "py314"
+target-version = "py313"  # keeps code valid on 3.13 (e.g. no PEP 758 bare except tuples)
 
 [lint]
 select = ["E", "F", "I", "UP", "B", "W"]
