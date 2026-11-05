@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .device import ACInfinityDevice
 from .coordinator import ACInfinityDataUpdateCoordinator
+from .device import ACInfinityDevice
 
 
 @dataclass

@@ -1,17 +1,21 @@
 """Proves the user setup step lists AC Infinity devices and ignores every other BLE device."""
+
 from types import SimpleNamespace
 from unittest.mock import patch
 
 from ac_infinity_ble.const import MANUFACTURER_ID
 
 from custom_components.ac_infinity.config_flow import ConfigFlow
+
 from .test_parse import advert
 
 PATCH = "custom_components.ac_infinity.config_flow.async_discovered_service_info"
 
 
 def ble(address, manufacturer_data):
-    return SimpleNamespace(address=address, advertisement=SimpleNamespace(manufacturer_data=manufacturer_data))
+    return SimpleNamespace(
+        address=address, advertisement=SimpleNamespace(manufacturer_data=manufacturer_data)
+    )
 
 
 async def _user_step(hass, discovered):

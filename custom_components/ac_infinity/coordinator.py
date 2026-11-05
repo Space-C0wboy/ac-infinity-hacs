@@ -8,12 +8,11 @@ import async_timeout
 from ac_infinity_ble.const import MANUFACTURER_ID
 from bleak.backends.device import BLEDevice
 from homeassistant.components import bluetooth
-from homeassistant.components.bluetooth.active_update_coordinator import \
-    ActiveBluetoothDataUpdateCoordinator
-from homeassistant.helpers.update_coordinator import (
-    BaseCoordinatorEntity
+from homeassistant.components.bluetooth.active_update_coordinator import (
+    ActiveBluetoothDataUpdateCoordinator,
 )
 from homeassistant.core import CoreState, HomeAssistant, callback
+from homeassistant.helpers.update_coordinator import BaseCoordinatorEntity
 
 from .device import ACInfinityDevice
 
@@ -21,7 +20,6 @@ DEVICE_STARTUP_TIMEOUT = 30
 
 
 class ACInfinityDataUpdateCoordinator(ActiveBluetoothDataUpdateCoordinator[None]):
-
     def __init__(
         self,
         hass: HomeAssistant,
@@ -58,15 +56,15 @@ class ACInfinityDataUpdateCoordinator(ActiveBluetoothDataUpdateCoordinator[None]
             )
         )
 
-    async def _async_update(
-        self, service_info: bluetooth.BluetoothServiceInfoBleak
-    ) -> None:
+    async def _async_update(self, service_info: bluetooth.BluetoothServiceInfoBleak) -> None:
         """Poll the device."""
         await self.controller.update()
-        self.logger.debug("%s (%s) state after poll: %s",
-                          self.ble_device.name,
-                          self.ble_device.address,
-                          self.controller.state)
+        self.logger.debug(
+            "%s (%s) state after poll: %s",
+            self.ble_device.name,
+            self.ble_device.address,
+            self.controller.state,
+        )
 
     @callback
     def _async_handle_bluetooth_event(
@@ -75,10 +73,12 @@ class ACInfinityDataUpdateCoordinator(ActiveBluetoothDataUpdateCoordinator[None]
         change: bluetooth.BluetoothChange,
     ) -> None:
         """Handle a Bluetooth event."""
-        self.logger.debug("%s (%s) received: %s",
-                          self.ble_device.name,
-                          self.ble_device.address,
-                          service_info.advertisement)
+        self.logger.debug(
+            "%s (%s) received: %s",
+            self.ble_device.name,
+            self.ble_device.address,
+            service_info.advertisement,
+        )
         if MANUFACTURER_ID not in service_info.advertisement.manufacturer_data:
             return
         self.ble_device = service_info.device
@@ -87,10 +87,12 @@ class ACInfinityDataUpdateCoordinator(ActiveBluetoothDataUpdateCoordinator[None]
         )
         if self.controller.name:
             self._device_ready.set()
-        self.logger.debug("%s (%s) state after advertisement: %s",
-                          self.ble_device.name,
-                          self.ble_device.address,
-                          self.controller.state)
+        self.logger.debug(
+            "%s (%s) state after advertisement: %s",
+            self.ble_device.name,
+            self.ble_device.address,
+            self.controller.state,
+        )
         super()._async_handle_bluetooth_event(service_info, change)
 
     async def async_wait_ready(self) -> bool:
@@ -103,10 +105,8 @@ class ACInfinityDataUpdateCoordinator(ActiveBluetoothDataUpdateCoordinator[None]
 
 
 class ActiveBluetoothCoordinatorEntity[
-    _ActiveBluetoothDataUpdateCoordinatorT: ActiveBluetoothDataUpdateCoordinator = ActiveBluetoothDataUpdateCoordinator
-](
-    BaseCoordinatorEntity[_ActiveBluetoothDataUpdateCoordinatorT]
-):
+    ActiveBluetoothDataUpdateCoordinatorT: ActiveBluetoothDataUpdateCoordinator = ActiveBluetoothDataUpdateCoordinator
+](BaseCoordinatorEntity[ActiveBluetoothDataUpdateCoordinatorT]):
     """A class for entities using an ActiveBluetoothDataUpdateCoordinator and whose availability should include
     whether the last Bluetooth poll was successful."""
 

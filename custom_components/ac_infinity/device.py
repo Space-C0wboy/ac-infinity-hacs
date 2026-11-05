@@ -3,10 +3,9 @@ from __future__ import annotations
 import dataclasses
 import logging
 from dataclasses import dataclass
-from typing import Optional
 
 from ac_infinity_ble import ACInfinityController, DeviceInfo
-from ac_infinity_ble.const import CallbackType, MANUFACTURER_ID
+from ac_infinity_ble.const import MANUFACTURER_ID, CallbackType
 from ac_infinity_ble.protocol import parse_manufacturer_data
 from ac_infinity_ble.util import get_bit
 from bleak.backends.device import BLEDevice
@@ -44,19 +43,19 @@ class DeviceInfoEx(DeviceInfo):
     def create(device_info: DeviceInfo) -> DeviceInfoEx:
         return DeviceInfoEx(**device_info.__dict__)
 
-    auto_mode: Optional[AutoModeConfig] = None
+    auto_mode: AutoModeConfig | None = None
     # Durations in minutes (the wire format is seconds; we store/expose minutes,
     # matching the official app). None until the first poll.
-    timer_to_on: Optional[int] = None
-    timer_to_off: Optional[int] = None
-    cycle_on: Optional[int] = None
-    cycle_off: Optional[int] = None
+    timer_to_on: int | None = None
+    timer_to_off: int | None = None
+    cycle_on: int | None = None
+    cycle_off: int | None = None
     # Read from an optional secondary poll (params 24/33/35/36). Read-only for
     # now until the on-wire formats are verified against the app.
-    time_remaining: Optional[int] = None       # minutes (best-effort decode)
-    backlight: Optional[int] = None            # raw brightness gear
-    temp_calibration: Optional[int] = None     # degrees C (signed)
-    temp_buffer: Optional[int] = None          # degrees C
+    time_remaining: int | None = None  # minutes (best-effort decode)
+    backlight: int | None = None  # raw brightness gear
+    temp_calibration: int | None = None  # degrees C (signed)
+    temp_buffer: int | None = None  # degrees C
 
 
 @dataclass
@@ -94,53 +93,54 @@ class ACInfinityDevice(ACInfinityController):
     ) -> None:
         self._ble_device = ble_device
         self._advertisement_data = advertisement_data
-        info = parse_manufacturer_data(
-            advertisement_data.manufacturer_data[MANUFACTURER_ID]
-        )
+        info = parse_manufacturer_data(advertisement_data.manufacturer_data[MANUFACTURER_ID])
         self._state = dataclasses.replace(
             self._state, **{k: v for k, v in dataclasses.asdict(info).items() if v is not None}
         )
         self._fire_callbacks(CallbackType.ADVERTISEMENT)
 
     @property
-    def speed(self) -> Optional[int]:
+    def speed(self) -> int | None:
         """Get the speed of the device."""
         return self._state.fan
 
     @property
-    def temperature(self) -> Optional[float]:
+    def temperature(self) -> float | None:
         """Get the temperature of the device."""
         return self._state.tmp
 
     @property
-    def humidity(self) -> Optional[float]:
+    def humidity(self) -> float | None:
         """Get the humidity of the device."""
         return self._state.hum
 
     @property
-    def vpd(self) -> Optional[float]:
+    def vpd(self) -> float | None:
         """Get the vpd of the device."""
         return self._state.vpd
 
     @property
-    def auto_mode(self) -> Optional[AutoModeConfig]:
+    def auto_mode(self) -> AutoModeConfig | None:
         return self._state.auto_mode
 
     @property
-    def min_speed(self) -> Optional[int]:
+    def min_speed(self) -> int | None:
         return self._state.level_off
 
     @property
-    def max_speed(self) -> Optional[int]:
+    def max_speed(self) -> int | None:
         return self._state.level_on
 
     @property
     def state(self) -> DeviceInfoEx:
         return self._state
 
-    def update_needed(self, seconds_since_last_update: Optional[float | int]) -> bool:
-        return (self._config_changed_since_last_update or
-                seconds_since_last_update is None or seconds_since_last_update > _MIN_SECONDS_BETWEEN_POLLS)
+    def update_needed(self, seconds_since_last_update: float | int | None) -> bool:
+        return (
+            self._config_changed_since_last_update
+            or seconds_since_last_update is None
+            or seconds_since_last_update > _MIN_SECONDS_BETWEEN_POLLS
+        )
 
     async def update(self) -> None:
         """Poll the device to update state date, including data not present in BLE advertisements."""
@@ -154,7 +154,7 @@ class ACInfinityDevice(ACInfinityController):
                         "%s: Skipping update; data too short (%s): %s",
                         self.name,
                         len(data),
-                        data.hex()
+                        data.hex(),
                     )
                 else:
                     self.state.work_type = data[12]
@@ -182,7 +182,7 @@ class ACInfinityDevice(ACInfinityController):
                     while i + 1 < end:
                         pid = data[i]
                         ln = data[i + 1]
-                        tlvs[pid] = data[i + 2:i + 2 + ln]
+                        tlvs[pid] = data[i + 2 : i + 2 + ln]
                         i += 2 + ln
                     if (v := tlvs.get(20)) and len(v) >= 4:
                         self.state.timer_to_on = int.from_bytes(v[:4], "big") // 60
@@ -211,7 +211,7 @@ class ACInfinityDevice(ACInfinityController):
                     j = 10
                     end2 = min(10 + plen2, len(data2))
                     while j + 1 < end2:
-                        tl2[data2[j]] = data2[j + 2:j + 2 + data2[j + 1]]
+                        tl2[data2[j]] = data2[j + 2 : j + 2 + data2[j + 1]]
                         j += 2 + data2[j + 1]
                     if (v := tl2.get(24)) and len(v) >= 4:
                         self.state.time_remaining = int.from_bytes(v[:4], "big") // 60
@@ -220,14 +220,10 @@ class ACInfinityDevice(ACInfinityController):
                     if (v := tl2.get(35)) and len(v) >= 2:
                         self.state.temp_buffer = v[1]
                     if (v := tl2.get(36)) and len(v) >= 2:
-                        self.state.temp_calibration = int.from_bytes(
-                            v[1:2], "big", signed=True
-                        )
+                        self.state.temp_calibration = int.from_bytes(v[1:2], "big", signed=True)
                     self._fire_callbacks(CallbackType.UPDATE_RESPONSE)
             except Exception:  # pylint: disable=broad-except
-                _LOGGER.debug(
-                    "%s: optional extra-params read failed", self.name, exc_info=True
-                )
+                _LOGGER.debug("%s: optional extra-params read failed", self.name, exc_info=True)
         finally:
             await self._execute_disconnect()
 
@@ -260,28 +256,36 @@ class ACInfinityDevice(ACInfinityController):
 
     async def async_set_auto_high_temp(self, value: float) -> None:
         if self.auto_mode is None:
-            raise ValueError("Auto mode configuration is not loaded; cannot change configuration values")
+            raise ValueError(
+                "Auto mode configuration is not loaded; cannot change configuration values"
+            )
 
         new_config = dataclasses.replace(self.auto_mode, high_temp=round(value))
         await self.async_set_auto_mode_config(new_config)
 
     async def async_set_auto_low_temp(self, value: float) -> None:
         if self.auto_mode is None:
-            raise ValueError("Auto mode configuration is not loaded; cannot change configuration values")
+            raise ValueError(
+                "Auto mode configuration is not loaded; cannot change configuration values"
+            )
 
         new_config = dataclasses.replace(self.auto_mode, low_temp=round(value))
         await self.async_set_auto_mode_config(new_config)
 
     async def async_set_auto_mode_high_temp_enabled(self, enabled: bool) -> None:
         if self.auto_mode is None:
-            raise ValueError("Auto mode configuration is not loaded; cannot change configuration values")
+            raise ValueError(
+                "Auto mode configuration is not loaded; cannot change configuration values"
+            )
 
         new_config = dataclasses.replace(self.auto_mode, high_temp_enabled=enabled)
         await self.async_set_auto_mode_config(new_config)
 
     async def async_set_auto_mode_low_temp_enabled(self, enabled: bool) -> None:
         if self.auto_mode is None:
-            raise ValueError("Auto mode configuration is not loaded; cannot change configuration values")
+            raise ValueError(
+                "Auto mode configuration is not loaded; cannot change configuration values"
+            )
 
         new_config = dataclasses.replace(self.auto_mode, low_temp_enabled=enabled)
         await self.async_set_auto_mode_config(new_config)
@@ -312,12 +316,17 @@ class ACInfinityDevice(ACInfinityController):
         low_temp_f = round(c_to_f(config.low_temp))
         low_temp_c = config.low_temp
 
-        command = [19, 7,
-                   temp_hum_enabled_switches,
-                   high_temp_f, high_temp_c,
-                   low_temp_f, low_temp_c,
-                   config.high_humidity,
-                   config.low_humidity]
+        command = [
+            19,
+            7,
+            temp_hum_enabled_switches,
+            high_temp_f,
+            high_temp_c,
+            low_temp_f,
+            low_temp_c,
+            config.high_humidity,
+            config.low_humidity,
+        ]
         if self.state.type in FAMILY_E_MODELS:
             command += [255, 0]
         command = self._protocol._add_head(command, 3, self.sequence)
@@ -391,9 +400,7 @@ class ACInfinityDevice(ACInfinityController):
 
     async def async_set_cycle(self, on_minutes: int, off_minutes: int) -> None:
         """Set the cycle on/off durations, in minutes."""
-        _LOGGER.debug(
-            "%s: Setting cycle to on=%s off=%s min", self.name, on_minutes, off_minutes
-        )
+        _LOGGER.debug("%s: Setting cycle to on=%s off=%s min", self.name, on_minutes, off_minutes)
         await self._async_set_duration(
             [22, 8]
             + self._minutes_seconds_bytes(on_minutes)
@@ -413,9 +420,7 @@ class ACInfinityDevice(ACInfinityController):
     async def async_set_backlight(self, value: int) -> None:
         """Set the display backlight brightness gear."""
         _LOGGER.debug("%s: Setting backlight to %s", self.name, value)
-        await self._async_set_duration(
-            [33, 1, int(value) & 0xFF], backlight=int(value)
-        )
+        await self._async_set_duration([33, 1, int(value) & 0xFF], backlight=int(value))
 
     async def async_set_temp_calibration(self, celsius: int) -> None:
         """Set the temperature calibration offset, in degrees C.
@@ -426,9 +431,7 @@ class ACInfinityDevice(ACInfinityController):
         c = int(celsius)
         f = round(c * 9 / 5 + 32)
         _LOGGER.debug("%s: Setting temp calibration to %s C", self.name, c)
-        await self._async_set_duration(
-            [36, 3, f & 0xFF, c & 0xFF, 0], temp_calibration=c
-        )
+        await self._async_set_duration([36, 3, f & 0xFF, c & 0xFF, 0], temp_calibration=c)
 
     async def async_set_max_speed(self, value: int) -> None:
         """Set the maximum fan speed for auto and other dynamic modes."""

@@ -3,9 +3,8 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from ac_infinity_ble.const import MANUFACTURER_ID
 import voluptuous as vol
-
+from ac_infinity_ble.const import MANUFACTURER_ID
 from homeassistant import config_entries
 from homeassistant.components.bluetooth import (
     BluetoothServiceInfoBleak,
@@ -22,20 +21,18 @@ _LOGGER = logging.getLogger(__name__)
 
 def parse_manufacturer_data(data: bytes) -> DeviceInfoEx:
     from ac_infinity_ble.protocol import parse_manufacturer_data as parse
+
     return DeviceInfoEx.create(parse(data))
 
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-
     VERSION = 1
 
     def __init__(self) -> None:
         self._discovery_info: BluetoothServiceInfoBleak | None = None
         self._discovered_devices: dict[str, BluetoothServiceInfoBleak] = {}
 
-    async def async_step_bluetooth(
-        self, discovery_info: BluetoothServiceInfoBleak
-    ) -> FlowResult:
+    async def async_step_bluetooth(self, discovery_info: BluetoothServiceInfoBleak) -> FlowResult:
         """Handle the bluetooth discovery step."""
         await self.async_set_unique_id(discovery_info.address)
         self._abort_if_unique_id_configured()
@@ -46,18 +43,14 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self.context["title_placeholders"] = {"name": device.name}
         return await self.async_step_user()
 
-    async def async_step_user(
-        self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         """Handle the user step to pick discovered device."""
         errors: dict[str, str] = {}
 
         if user_input is not None:
             address = user_input[CONF_ADDRESS]
             discovery_info = self._discovered_devices[address]
-            await self.async_set_unique_id(
-                discovery_info.address, raise_on_progress=False
-            )
+            await self.async_set_unique_id(discovery_info.address, raise_on_progress=False)
             self._abort_if_unique_id_configured()
             controller = ACInfinityDevice(
                 discovery_info.device, advertisement_data=discovery_info.advertisement
@@ -76,9 +69,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     data={
                         CONF_ADDRESS: discovery_info.address,
                         CONF_SERVICE_DATA: parse_manufacturer_data(
-                            discovery_info.advertisement.manufacturer_data[
-                                MANUFACTURER_ID
-                            ]
+                            discovery_info.advertisement.manufacturer_data[MANUFACTURER_ID]
                         ),
                     },
                 )

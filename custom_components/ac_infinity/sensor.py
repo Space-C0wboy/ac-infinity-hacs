@@ -1,15 +1,19 @@
 from __future__ import annotations
 
-from homeassistant.components.bluetooth.passive_update_coordinator import \
-    PassiveBluetoothCoordinatorEntity
-from homeassistant.components.sensor import (SensorDeviceClass, SensorEntity,
-                                             SensorStateClass)
 from collections.abc import Callable
-from typing import Optional
 
+from homeassistant.components.bluetooth.passive_update_coordinator import (
+    PassiveBluetoothCoordinatorEntity,
+)
+from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import (PERCENTAGE, EntityCategory, UnitOfPressure,
-                                 UnitOfTemperature, UnitOfTime)
+from homeassistant.const import (
+    PERCENTAGE,
+    EntityCategory,
+    UnitOfPressure,
+    UnitOfTemperature,
+    UnitOfTime,
+)
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.entity import DeviceInfo
@@ -31,9 +35,14 @@ async def async_setup_entry(
     entities = [
         TemperatureSensor(data.coordinator, data.device, "Temperature"),
         FanSpeedSensor(data.coordinator, data.device, "Fan Speed"),
-        GenericSensor(data.coordinator, data.device, "Time Remaining",
-                      lambda d: d.state.time_remaining,
-                      unit=UnitOfTime.MINUTES, icon="mdi:timer-sand"),
+        GenericSensor(
+            data.coordinator,
+            data.device,
+            "Time Remaining",
+            lambda d: d.state.time_remaining,
+            unit=UnitOfTime.MINUTES,
+            icon="mdi:timer-sand",
+        ),
     ]
 
     if data.device.state.type not in [6]:  # Airtap does not have humidity
@@ -132,12 +141,12 @@ class GenericSensor(ACInfinitySensor):
         coordinator: ACInfinityDataUpdateCoordinator,
         device: ACInfinityDevice,
         name: str,
-        get_value: Callable[[ACInfinityDevice], Optional[float]],
-        unit: Optional[str] = None,
-        device_class: Optional[SensorDeviceClass] = None,
-        state_class: Optional[SensorStateClass] = None,
-        entity_category: Optional[EntityCategory] = None,
-        icon: Optional[str] = None,
+        get_value: Callable[[ACInfinityDevice], float | None],
+        unit: str | None = None,
+        device_class: SensorDeviceClass | None = None,
+        state_class: SensorStateClass | None = None,
+        entity_category: EntityCategory | None = None,
+        icon: str | None = None,
     ) -> None:
         self._get_value = get_value
         super().__init__(coordinator, device, name)

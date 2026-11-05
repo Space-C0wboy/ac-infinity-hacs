@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
-from typing import Any, Optional
+from typing import Any
 
 from homeassistant.components.switch import SwitchDeviceClass, SwitchEntity
 from homeassistant.config_entries import ConfigEntry
@@ -13,8 +13,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util import slugify
 
 from .const import DEVICE_MODEL, DOMAIN, MANUFACTURER
-from .coordinator import (ACInfinityDataUpdateCoordinator,
-                          ActiveBluetoothCoordinatorEntity)
+from .coordinator import ACInfinityDataUpdateCoordinator, ActiveBluetoothCoordinatorEntity
 from .device import ACInfinityDevice
 from .models import ACInfinityData
 
@@ -26,16 +25,20 @@ async def async_setup_entry(
 ) -> None:
     data: ACInfinityData = hass.data[DOMAIN][entry.entry_id]
     entities: list[ACInfinitySwitch] = [
-        ACInfinitySwitch(data.coordinator,
-                         data.device,
-                         "Auto Mode High Temperature Trigger",
-                         lambda d: None if d.auto_mode is None else d.auto_mode.high_temp_enabled,
-                         ACInfinityDevice.async_set_auto_mode_high_temp_enabled),
-        ACInfinitySwitch(data.coordinator,
-                         data.device,
-                         "Auto Mode Low Temperature Trigger",
-                         lambda d: None if d.auto_mode is None else d.auto_mode.low_temp_enabled,
-                         ACInfinityDevice.async_set_auto_mode_low_temp_enabled),
+        ACInfinitySwitch(
+            data.coordinator,
+            data.device,
+            "Auto Mode High Temperature Trigger",
+            lambda d: None if d.auto_mode is None else d.auto_mode.high_temp_enabled,
+            ACInfinityDevice.async_set_auto_mode_high_temp_enabled,
+        ),
+        ACInfinitySwitch(
+            data.coordinator,
+            data.device,
+            "Auto Mode Low Temperature Trigger",
+            lambda d: None if d.auto_mode is None else d.auto_mode.low_temp_enabled,
+            ACInfinityDevice.async_set_auto_mode_low_temp_enabled,
+        ),
     ]
 
     async_add_entities(entities)
@@ -45,9 +48,7 @@ class ACInfinitySwitch(
     ActiveBluetoothCoordinatorEntity[ACInfinityDataUpdateCoordinator], SwitchEntity
 ):
     _attr_device_class = SwitchDeviceClass.SWITCH
-    _attr_entity_category = (
-        EntityCategory.CONFIG
-    )
+    _attr_entity_category = EntityCategory.CONFIG
     _attr_has_entity_name = True
 
     def __init__(
@@ -55,7 +56,7 @@ class ACInfinitySwitch(
         coordinator: ACInfinityDataUpdateCoordinator,
         device: ACInfinityDevice,
         name: str,
-        get_is_on: Callable[[ACInfinityDevice], Optional[bool]],
+        get_is_on: Callable[[ACInfinityDevice], bool | None],
         async_set_is_on: Callable[[ACInfinityDevice, bool], Awaitable[None]],
     ) -> None:
         super().__init__(coordinator)

@@ -9,11 +9,16 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util import slugify
 
 from .const import DEVICE_MODEL, DOMAIN, MANUFACTURER
-from .coordinator import (ACInfinityDataUpdateCoordinator,
-                          ActiveBluetoothCoordinatorEntity)
-from .device import (WORK_TYPE_AUTO, WORK_TYPE_CYCLE, WORK_TYPE_OFF,
-                     WORK_TYPE_ON, WORK_TYPE_TIMER_TO_OFF,
-                     WORK_TYPE_TIMER_TO_ON, ACInfinityDevice)
+from .coordinator import ACInfinityDataUpdateCoordinator, ActiveBluetoothCoordinatorEntity
+from .device import (
+    WORK_TYPE_AUTO,
+    WORK_TYPE_CYCLE,
+    WORK_TYPE_OFF,
+    WORK_TYPE_ON,
+    WORK_TYPE_TIMER_TO_OFF,
+    WORK_TYPE_TIMER_TO_ON,
+    ACInfinityDevice,
+)
 from .models import ACInfinityData
 
 # Display label -> protocol work_type value. This is the full operating mode,
